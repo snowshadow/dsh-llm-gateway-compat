@@ -1,0 +1,3 @@
+- insert:
+    - id: llm-gateway-compat
+      name: dsh-llm-gateway-compat

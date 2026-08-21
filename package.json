@@ -1,0 +1,76 @@
+{
+  "name": "dsh-llm-gateway-compat",
+  "version": "0.3.0",
+  "description": "OpenAI-compatible gateway adapter and dialect fixes for DeepSeek Harness",
+  "license": "MIT",
+  "author": "Alfred Xia",
+  "type": "module",
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "LICENSE",
+    "README.md",
+    "README.zh.md"
+  ],
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "llm",
+    "openai-compatible"
+  ],
+  "homepage": "https://github.com/snowshadow/dsh-llm-gateway-compat#readme",
+  "bugs": {
+    "url": "https://github.com/snowshadow/dsh-llm-gateway-compat/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/snowshadow/dsh-llm-gateway-compat.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepare": "tsc -p tsconfig.json",
+    "prepublishOnly": "vitest run && tsc -p tsconfig.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-llm": ">=0.0.1-rc.1",
+    "@deepseek-ai/dsh-settings": ">=0.0.1-rc.1"
+  },
+  "dependencies": {
+    "@deepseek-ai/schemastery": "^3.18.1"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-attachment": "0.0.1-rc.1",
+    "@deepseek-ai/dsh-brand": "0.0.1-rc.1",
+    "@deepseek-ai/dsh-invariants": "0.0.1-rc.1",
+    "@deepseek-ai/dsh-llm": "0.0.1-rc.1",
+    "@deepseek-ai/dsh-settings": "0.0.1-rc.1",
+    "@deepseek-ai/dsh-timeout": "0.0.1-rc.1",
+    "@types/node": "^26.2.0",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}
