@@ -2,6 +2,8 @@
 
 English | [中文](README.zh.md)
 
+[![dshbase install-tested](https://dshbase.com/badges/dsh-llm-gateway-compat.svg)](https://dshbase.com/plugins/dsh-llm-gateway-compat/)
+
 A community bundle compatible with DeepSeek Harness (DSH). It stops empty streamed tool-call identity from wiping the call, turns the two most common request 400s into an `llm-pi-ai` compat write plus one retry, and can own Chat Completions routes that default to `system` / `max_tokens`.
 
 This is **not** an official DeepSeek package. It is not endorsed by DeepSeek.

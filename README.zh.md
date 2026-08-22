@@ -2,6 +2,8 @@
 
 [English](README.md) | 中文
 
+[![dshbase 实测可装](https://dshbase.com/badges/dsh-llm-gateway-compat.svg)](https://dshbase.com/zh/plugins/dsh-llm-gateway-compat/)
+
 兼容 DeepSeek Harness（DSH）的社区 bundle。它阻止空串冲掉流式 tool-call 身份，把最常见的两种请求 400 写成官方 `llm-pi-ai` compat 并重试一次，还可以自己挂 Chat Completions 路由（默认 `system` / `max_tokens`）。
 
 这不是 DeepSeek 官方包，也未获 DeepSeek 背书。
