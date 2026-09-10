@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
-import LlmRuntime, { CallId, LlmAdapter, type GenerateOptions, type StreamChunk } from '@deepseek-ai/dsh-llm'
+import LlmRuntime, { ToolCallId, LlmAdapter, type GenerateOptions, type StreamChunk } from '@deepseek-ai/dsh-llm'
 import * as plugin from '../src/index.js'
 
 class ScriptedAdapter extends LlmAdapter {
@@ -26,21 +26,21 @@ const overwriteScript: StreamChunk[] = [
   {
     type: 'tool-call-delta',
     index: 0,
-    id: CallId('call_1'),
+    id: ToolCallId('call_1'),
     name: 'bash',
     argumentsDelta: '',
   },
   {
     type: 'tool-call-delta',
     index: 0,
-    id: CallId(''),
+    id: ToolCallId(''),
     name: '',
     argumentsDelta: '{}',
   },
   {
     type: 'block-end',
     index: 0,
-    block: { type: 'tool-call', id: CallId(''), name: '', arguments: '{}' },
+    block: { type: 'tool-call', id: ToolCallId(''), name: '', arguments: '{}' },
   },
   { type: 'finish', reason: { kind: 'tool-calls' } },
 ]
@@ -56,7 +56,7 @@ describe('llm-gateway-compat plugin', () => {
     expect(chunks[3]).toEqual({
       type: 'block-end',
       index: 0,
-      block: { type: 'tool-call', id: CallId('call_1'), name: 'bash', arguments: '{}' },
+      block: { type: 'tool-call', id: ToolCallId('call_1'), name: 'bash', arguments: '{}' },
     })
   })
 

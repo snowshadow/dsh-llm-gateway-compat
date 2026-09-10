@@ -4,9 +4,11 @@ English | [中文](README.zh.md)
 
 [![dshbase install-tested](https://dshbase.com/badges/dsh-llm-gateway-compat.svg)](https://dshbase.com/plugins/dsh-llm-gateway-compat/)
 
-A community bundle compatible with DeepSeek Harness (DSH). It stops empty streamed tool-call identity from wiping the call, turns the two most common request 400s into an `llm-pi-ai` compat write plus one retry, and can own Chat Completions routes that default to `system` / `max_tokens`.
+A community bundle compatible with DeepSeek Harness (DSH) **0.1.5-rc.1 or later**. It stops empty streamed tool-call identity from wiping the call, turns the two most common request 400s into an `llm-pi-ai` compat write plus one retry, and can own Chat Completions routes that default to `system` / `max_tokens`.
 
 This is **not** an official DeepSeek package. It is not endorsed by DeepSeek.
+
+0.4.0 tracks the current harness APIs (`ToolCallId`, `ctx.settings.installSection`). It will not load against npm `0.0.1-rc.1`.
 
 ## What it does
 
@@ -33,28 +35,19 @@ Route ids must not collide with `llm-deepseek` or `llm-pi-ai`. Pick a new id suc
 
 ## Install
 
-From npm (recommended — ships built `lib/`, no install-time build):
-
-```sh
-dsh plugin --profile web add dsh-llm-gateway-compat
-```
-
-Restart `dsh web`.
-
-From GitHub, pnpm fetches sources and runs `prepare`. pnpm ≥10 refuses that script until the profile allowlists it:
+From GitHub (ships built `lib/`, no install-time TypeScript build):
 
 ```sh
 dsh plugin --profile web add github:snowshadow/dsh-llm-gateway-compat
 ```
 
-If the first add fails, put this in that profile's `pnpm-workspace.yaml` and re-run `add`:
+Restart `dsh web`. Pin a commit (`github:snowshadow/dsh-llm-gateway-compat#<sha>`) so a later push cannot change what runs. Only add packages whose source you trust.
 
-```yaml
-allowBuilds:
-  dsh-llm-gateway-compat: true
+From a local checkout:
+
+```sh
+dsh plugin --profile web add /absolute/path/to/dsh-llm-gateway-compat
 ```
-
-Pin a commit (`github:snowshadow/dsh-llm-gateway-compat#<sha>`) so a later push cannot change what runs. Only allow packages whose source you trust.
 
 ## Config
 
@@ -86,14 +79,14 @@ llm-gateway-compat:
           name: DeepSeek V4 Flash
 ```
 
-Export `DASHSCOPE_API_KEY` in the environment that launches `dsh`. Include `/v1` (or `/compatible-mode/v1`) in `baseURL` when the gateway requires it. Then select the `dashscope-compat` / `deepseek-v4-flash` route in the model picker.
+Store `DASHSCOPE_API_KEY` on the Models page or in `$DSH_HOME/.credentials.yaml`, or export it in the environment that launches `dsh`. Include `/v1` (or `/compatible-mode/v1`) in `baseURL` when the gateway requires it. Then select the `dashscope-compat` / `deepseek-v4-flash` route in the model picker.
 
 Provider fields:
 
 | key | default | meaning |
 |---|---|---|
 | `baseURL` | required | origin plus path prefix; `/chat/completions` is appended |
-| `apiKeyEnv` | required | environment variable holding the raw key |
+| `apiKeyEnv` | required | credential reference: Models page / `$DSH_HOME/.credentials.yaml`, then that environment variable |
 | `authHeader` | `bearer` | `bearer` or `api-key` |
 | `models` | `[]` | advisory catalog; unlisted ids still resolve as text-only |
 | `extraBody` | — | merged under harness-owned fields; `max_completion_tokens` is stripped |
@@ -102,6 +95,8 @@ Provider fields:
 | `includeUsage` | `true` | send `stream_options.include_usage` |
 
 ## Develop
+
+Typecheck and tests expect a sibling `deepseek-harness` checkout at `../deepseek-harness` (0.1.5-rc.1 APIs). `pnpm test` / `pnpm run build` link `@deepseek-ai/dsh-llm`, `dsh-settings`, and `cordis` to that checkout.
 
 ```sh
 pnpm install

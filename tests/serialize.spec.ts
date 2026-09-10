@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CallId, LlmError, createMessage, createUserMessage } from '@deepseek-ai/dsh-llm'
+import { ToolCallId, LlmError, createMessage, createUserMessage } from '@deepseek-ai/dsh-llm'
 import { serializeRequest } from '../src/completions/serialize.js'
 import { resolveProfiles } from '../src/completions/profile.js'
 
@@ -48,7 +48,7 @@ describe('serializeRequest', () => {
       content: [
         { type: 'reasoning', text: 'plan' },
         { type: 'text', text: 'done' },
-        { type: 'tool-call', id: CallId('c1'), name: 'bash', arguments: '{}' },
+        { type: 'tool-call', id: ToolCallId('c1'), name: 'bash', arguments: '{}' },
       ],
       source: { kind: 'model', provider: 'gw', model: 'qwen' },
     })

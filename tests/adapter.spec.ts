@@ -85,6 +85,26 @@ describe('CompletionsAdapter', () => {
     }).next()).rejects.toMatchObject({ code: 'MISSING_CREDENTIAL' })
   })
 
+  it('prefers resolveApiKey over the process environment', async () => {
+    process.env.GW_KEY = 'sk-env'
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      const headers = new Headers(init?.headers)
+      expect(headers.get('api-key')).toBe('sk-stored')
+      return new Response(sseBody([
+        JSON.stringify({ choices: [{ delta: { content: 'ok' }, finish_reason: 'stop' }] }),
+        '[DONE]',
+      ]), { status: 200, headers: { 'content-type': 'text/event-stream' } })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const adapter = new CompletionsAdapter({
+      profiles: () => profiles,
+      resolveApiKey: async () => 'sk-stored',
+    })
+    await adapter.stream({ provider: 'gw', model: 'qwen', messages: [] }).next()
+    expect(fetchMock).toHaveBeenCalledOnce()
+  })
+
   it('registers configured routes on ctx.llm', async () => {
     process.env.GW_KEY = 'sk-test'
     const ctx = new Context()

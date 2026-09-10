@@ -5,7 +5,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import Schema from '@deepseek-ai/schemastery'
 import { boundContextSummary, createUserMessage } from '@deepseek-ai/dsh-llm'
-import { installSettingsSection } from '@deepseek-ai/dsh-settings'
+import '@deepseek-ai/dsh-settings'
 import { sanitizeToolCallStream } from './sanitize.js'
 import { recoverGatewayError } from './recover.js'
 import type { GatewayRequestErrorAction, GatewayRequestErrorPayload } from './recover.js'
@@ -87,16 +87,18 @@ export function apply(ctx: Context, config: Config): void {
   })
 
   const completions = registerCompletionsAdapter(ctx, () => source())
-
-  installSettingsSection(ctx, SETTINGS_NS, Config, config, {
-    setSource: (current) => {
-      source = current
-    },
-    onChange: () => {
-      completions.sync()
-    },
-  })
   completions.sync()
+
+  ctx.inject(['settings'], (settingsCtx) => {
+    settingsCtx.settings.installSection(ctx, SETTINGS_NS, Config, config, {
+      setSource: (current) => {
+        source = current
+      },
+      onChange: () => {
+        completions.sync()
+      },
+    })
+  })
 
   ctx.inject(['agents', 'settings'], (wired) => {
     wired.on('agent/request-error', async (payload: GatewayRequestErrorPayload, next: () => Promise<GatewayRequestErrorAction>) => {

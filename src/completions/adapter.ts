@@ -28,6 +28,12 @@ export const PACKAGE_NAME = 'dsh-llm-gateway-compat'
 export interface CompletionsAdapterOptions {
   /** Current provider profiles keyed by route id. */
   profiles: () => Readonly<Record<string, GatewayProviderProfile>>
+  /**
+   * Resolve the API key for one profile. Defaults to `process.env[apiKeyEnv]`.
+   * The registering plugin should consult `ctx.credentials` first so keys
+   * stored by the Models page / `.credentials.yaml` work.
+   */
+  resolveApiKey?: (profile: GatewayProviderProfile) => Promise<string>
 }
 
 function httpErrorCode(status: number, error?: WireError['error']): string {
@@ -50,11 +56,11 @@ function authHeaders(profile: GatewayProviderProfile, apiKey: string): Record<st
     : { authorization: `Bearer ${apiKey}` }
 }
 
-function resolveApiKey(profile: GatewayProviderProfile): string {
+function envApiKey(profile: GatewayProviderProfile): string {
   const raw = process.env[profile.apiKeyEnv]
   if (raw === undefined) {
     throw new LlmError(
-      `${PACKAGE_NAME}: missing environment variable ${profile.apiKeyEnv}`,
+      `${PACKAGE_NAME}: no API key for ${profile.apiKeyEnv}; store it in $DSH_HOME/.credentials.yaml or export it`,
       'MISSING_CREDENTIAL',
     )
   }
@@ -119,7 +125,7 @@ export class CompletionsAdapter extends LlmAdapter {
       )
     }
     const profile = this.profileOf(options.provider)
-    const apiKey = resolveApiKey(profile)
+    const apiKey = await (this.config.resolveApiKey ?? envApiKey)(profile)
     const body = serializeRequest(options, profile)
     const headers: Record<string, string> = {
       'content-type': 'application/json',

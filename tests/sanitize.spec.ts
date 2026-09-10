@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CallId, type StreamChunk } from '@deepseek-ai/dsh-llm'
+import { ToolCallId, type StreamChunk } from '@deepseek-ai/dsh-llm'
 import {
   sanitizeToolCallStream,
   SYNTHESIZED_CALL_ID_PREFIX,
@@ -28,7 +28,7 @@ function delta(
   return {
     type: 'tool-call-delta',
     index,
-    id: CallId(id),
+    id: ToolCallId(id),
     ...name !== undefined ? { name } : {},
     argumentsDelta: args,
   }
@@ -38,7 +38,7 @@ function end(index: number, id: string, name: string, args: string): StreamChunk
   return {
     type: 'block-end',
     index,
-    block: { type: 'tool-call', id: CallId(id), name, arguments: args },
+    block: { type: 'tool-call', id: ToolCallId(id), name, arguments: args },
   }
 }
 

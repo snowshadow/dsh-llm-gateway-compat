@@ -2,7 +2,8 @@
  * Register (and atomically replace) Chat Completions routes from live config.
  */
 import type { Context } from '@deepseek-ai/cordis'
-import type { AdapterRegistrationHandle, DirectoryRegistrationHandle } from '@deepseek-ai/dsh-llm'
+import { assertUsableApiKey, LlmError, type AdapterRegistrationHandle, type DirectoryRegistrationHandle } from '@deepseek-ai/dsh-llm'
+import { PACKAGE_NAME } from './adapter.js'
 import { SETTINGS_NS } from '../namespace.js'
 import { CompletionsAdapter } from './adapter.js'
 import { resolveProfiles } from './profile.js'
@@ -10,6 +11,27 @@ import type { ProviderConfig } from './profile.js'
 
 export interface CompletionsSource {
   providers?: Record<string, ProviderConfig>
+}
+
+/** Structural read of `ctx.credentials` so this plugin does not depend on the credentials package. */
+interface CredentialLookup {
+  resolve(ref: string): Promise<{ value: string } | undefined>
+}
+
+async function readApiKey(ctx: Context, apiKeyEnv: string): Promise<string> {
+  const credentials = ctx.get('credentials') as CredentialLookup | undefined
+  if (credentials !== undefined) {
+    const hit = await credentials.resolve(apiKeyEnv)
+    if (hit !== undefined) return assertUsableApiKey(hit.value, PACKAGE_NAME, apiKeyEnv)
+  }
+  const raw = process.env[apiKeyEnv]
+  if (raw === undefined) {
+    throw new LlmError(
+      `${PACKAGE_NAME}: no API key for ${apiKeyEnv}; store it in $DSH_HOME/.credentials.yaml or export it`,
+      'MISSING_CREDENTIAL',
+    )
+  }
+  return assertUsableApiKey(raw, PACKAGE_NAME, apiKeyEnv)
 }
 
 /**
@@ -22,6 +44,7 @@ export interface CompletionsSource {
 export function registerCompletionsAdapter(ctx: Context, source: () => CompletionsSource): { sync: () => void } {
   const adapter = new CompletionsAdapter({
     profiles: () => resolveProfiles(source().providers),
+    resolveApiKey: profile => readApiKey(ctx, profile.apiKeyEnv),
   })
   let registration: AdapterRegistrationHandle | undefined
   let directory: DirectoryRegistrationHandle | undefined

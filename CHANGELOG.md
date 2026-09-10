@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.0
+
+Requires DeepSeek Harness 0.1.5-rc.1 or later. Not compatible with published npm `0.0.1-rc.1` APIs.
+
+- Track `ToolCallId` (replaces `CallId`) on streamed tool-call identity
+- Register settings through `ctx.settings.installSection` instead of the removed `settingsNamespace` / `installSettingsSection` helpers
+- Resolve Chat Completions API keys from `ctx.credentials` first (`$DSH_HOME/.credentials.yaml` / Models page), then the process environment
+- Ship built `lib/` so `dsh plugin add github:snowshadow/dsh-llm-gateway-compat` does not need an install-time TypeScript build
+
 ## 0.3.0
 
 First public release. Community plugin, not an official DeepSeek package.

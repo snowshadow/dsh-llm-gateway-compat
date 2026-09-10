@@ -6,7 +6,7 @@
  * Empty strings overwrite in several OpenAI-compatible gateways because
  * adapters treat `id !== undefined` as a real update.
  */
-import { CallId, type StreamChunk } from '@deepseek-ai/dsh-llm'
+import { ToolCallId, type StreamChunk } from '@deepseek-ai/dsh-llm'
 
 /** Per-index identity collected from nonempty fragments. */
 interface SeenCall {
@@ -63,7 +63,7 @@ export function sanitizeToolCallChunk(chunk: StreamChunk, seen: Map<number, Seen
       return {
         type: 'tool-call-delta',
         index: chunk.index,
-        id: CallId(id),
+        id: ToolCallId(id),
         ...name !== undefined ? { name } : {},
         argumentsDelta: chunk.argumentsDelta,
       }
@@ -76,7 +76,7 @@ export function sanitizeToolCallChunk(chunk: StreamChunk, seen: Map<number, Seen
         index: chunk.index,
         block: {
           type: 'tool-call',
-          id: CallId(pick(chunk.block.id, entry.id, `${SYNTHESIZED_CALL_ID_PREFIX}${chunk.index}`)),
+          id: ToolCallId(pick(chunk.block.id, entry.id, `${SYNTHESIZED_CALL_ID_PREFIX}${chunk.index}`)),
           name: pick(chunk.block.name, entry.name, ''),
           arguments: chunk.block.arguments,
         },

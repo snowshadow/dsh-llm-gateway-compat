@@ -3,7 +3,7 @@
  * Empty tool-call id/name fragments never overwrite a nonempty value already
  * seen for that index. Empty initial reasoning does not open a block.
  */
-import { CallId, EMPTY_RESPONSE_CODE, LlmError, type ContentBlock, type FinishReason, type StreamChunk, type TokenUsage } from '@deepseek-ai/dsh-llm'
+import { ToolCallId, EMPTY_RESPONSE_CODE, LlmError, type ContentBlock, type FinishReason, type StreamChunk, type TokenUsage } from '@deepseek-ai/dsh-llm'
 import { SYNTHESIZED_CALL_ID_PREFIX } from '../sanitize.js'
 import { DONE } from './sse.js'
 import type { ThinkingFormat, WireChunk, WireUsage } from './types.js'
@@ -50,7 +50,7 @@ function closeBlock(block: OpenBlock): ContentBlock {
     case 'reasoning': return { type: 'reasoning', text: block.text }
     case 'tool-call': return {
       type: 'tool-call',
-      id: CallId(nonempty(block.callId) ? block.callId : `${SYNTHESIZED_CALL_ID_PREFIX}${block.index}`),
+      id: ToolCallId(nonempty(block.callId) ? block.callId : `${SYNTHESIZED_CALL_ID_PREFIX}${block.index}`),
       name: block.name ?? '',
       arguments: block.text,
     }
@@ -148,7 +148,7 @@ export async function* translate(
         yield {
           type: 'tool-call-delta',
           index: block.index,
-          id: CallId(block.callId ?? ''),
+          id: ToolCallId(block.callId ?? ''),
           ...block.name !== undefined ? { name: block.name } : {},
           argumentsDelta: fragment,
         }

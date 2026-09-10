@@ -4,9 +4,11 @@
 
 [![dshbase 实测可装](https://dshbase.com/badges/dsh-llm-gateway-compat.svg)](https://dshbase.com/zh/plugins/dsh-llm-gateway-compat/)
 
-兼容 DeepSeek Harness（DSH）的社区 bundle。它阻止空串冲掉流式 tool-call 身份，把最常见的两种请求 400 写成官方 `llm-pi-ai` compat 并重试一次，还可以自己挂 Chat Completions 路由（默认 `system` / `max_tokens`）。
+兼容 DeepSeek Harness（DSH）**0.1.5-rc.1 及以后**的社区 bundle。它阻止空串冲掉流式 tool-call 身份，把最常见的两种请求 400 写成官方 `llm-pi-ai` compat 并重试一次，还可以自己挂 Chat Completions 路由（默认 `system` / `max_tokens`）。
 
 这不是 DeepSeek 官方包，也未获 DeepSeek 背书。
+
+0.4.0 跟随当前 harness API（`ToolCallId`、`ctx.settings.installSection`），无法在 npm `0.0.1-rc.1` 上加载。
 
 ## 做什么
 
@@ -33,28 +35,19 @@
 
 ## 安装
 
-从 npm 安装（推荐 —— 包内已有构建好的 `lib/`，安装时不必再编译）：
-
-```sh
-dsh plugin --profile web add dsh-llm-gateway-compat
-```
-
-重启 `dsh web`。
-
-从 GitHub 安装时，pnpm 拉的是源码并会跑 `prepare`。pnpm ≥10 在未放行之前会拒绝该脚本：
+从 GitHub 安装（包内已有构建好的 `lib/`，安装时不必再编译）：
 
 ```sh
 dsh plugin --profile web add github:snowshadow/dsh-llm-gateway-compat
 ```
 
-若第一次 `add` 失败，把下面写进该 profile 的 `pnpm-workspace.yaml`，再跑一次 `add`：
+重启 `dsh web`。请 pin 到某个 commit（`github:snowshadow/dsh-llm-gateway-compat#<sha>`），避免后续 push 悄悄改变装上的代码。只添加你信任其源码的包。
 
-```yaml
-allowBuilds:
-  dsh-llm-gateway-compat: true
+从本地 checkout 安装：
+
+```sh
+dsh plugin --profile web add /absolute/path/to/dsh-llm-gateway-compat
 ```
-
-请 pin 到某个 commit（`github:snowshadow/dsh-llm-gateway-compat#<sha>`），避免后续 push 悄悄改变装上的代码。只放行你信任其源码的包。
 
 ## 配置
 
@@ -86,14 +79,14 @@ llm-gateway-compat:
           name: DeepSeek V4 Flash
 ```
 
-在启动 `dsh` 的环境里导出 `DASHSCOPE_API_KEY`。网关需要 `/v1` 或 `/compatible-mode/v1` 时写进 `baseURL`。然后在模型选择器里选 `dashscope-compat` / `deepseek-v4-flash`。
+把 `DASHSCOPE_API_KEY` 写进模型页或 `$DSH_HOME/.credentials.yaml`，或在启动 `dsh` 的环境里导出。网关需要 `/v1` 或 `/compatible-mode/v1` 时写进 `baseURL`。然后在模型选择器里选 `dashscope-compat` / `deepseek-v4-flash`。
 
 路由字段：
 
 | 键 | 默认 | 含义 |
 |---|---|---|
 | `baseURL` | 必填 | origin 加路径前缀；会再拼 `/chat/completions` |
-| `apiKeyEnv` | 必填 | 存放原始 key 的环境变量名 |
+| `apiKeyEnv` | 必填 | 凭据引用：先读模型页 / `$DSH_HOME/.credentials.yaml`，再读该环境变量 |
 | `authHeader` | `bearer` | `bearer` 或 `api-key` |
 | `models` | `[]` | 目录；未列出的 id 仍按纯文本模型解析 |
 | `extraBody` | — | 先合并，再被 harness 字段覆盖；`max_completion_tokens` 会被去掉 |
@@ -102,6 +95,8 @@ llm-gateway-compat:
 | `includeUsage` | `true` | 发送 `stream_options.include_usage` |
 
 ## 开发
+
+类型检查和测试需要旁边有一份 `deepseek-harness` checkout（`../deepseek-harness`，0.1.5-rc.1 API）。`pnpm test` / `pnpm run build` 会把 `@deepseek-ai/dsh-llm`、`dsh-settings`、`cordis` 链到那份 checkout。
 
 ```sh
 pnpm install

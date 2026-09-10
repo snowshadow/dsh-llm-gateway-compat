@@ -1,6 +1,6 @@
 {
   "name": "dsh-llm-gateway-compat",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "OpenAI-compatible gateway adapter and dialect fixes for DeepSeek Harness",
   "license": "MIT",
   "author": "Alfred Xia",
@@ -42,10 +42,10 @@
     "node": "^22.19.0 || >=24.0.0"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "test": "vitest run",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "prepare": "tsc -p tsconfig.json",
+    "link-harness": "node scripts/link-harness.mjs",
+    "build": "node scripts/link-harness.mjs && tsc -p tsconfig.json",
+    "test": "node scripts/link-harness.mjs && vitest run",
+    "typecheck": "node scripts/link-harness.mjs && tsc -p tsconfig.json --noEmit",
     "prepublishOnly": "vitest run && tsc -p tsconfig.json"
   },
   "dsh": {
@@ -55,8 +55,8 @@
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.1",
-    "@deepseek-ai/dsh-llm": ">=0.0.1-rc.1",
-    "@deepseek-ai/dsh-settings": ">=0.0.1-rc.1"
+    "@deepseek-ai/dsh-llm": ">=0.1.5-rc.1",
+    "@deepseek-ai/dsh-settings": ">=0.1.5-rc.1"
   },
   "dependencies": {
     "@deepseek-ai/schemastery": "^3.18.1"
