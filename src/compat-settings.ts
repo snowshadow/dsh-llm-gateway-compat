@@ -33,7 +33,7 @@ export function compatAlreadyApplied(section: unknown, provider: string, fix: Co
 }
 
 /**
- * Deep-merge patch for `ctx.settings.update('llm-pi-ai', patch)`.
+ * Compat fields to merge into one `llm-pi-ai` provider profile.
  * @param provider - route id.
  * @param fix - dialect correction.
  */
@@ -48,4 +48,24 @@ export function compatPatch(provider: string, fix: CompatFix): {
       [provider]: { compat: field },
     },
   }
+}
+
+/**
+ * Merge a compat patch into a raw `llm-pi-ai` entry config without dropping other providers or fields.
+ * @param current - the entry's current raw config.
+ * @param patch - one provider's compat fields.
+ */
+export function applyCompatPatch(
+  current: Record<string, unknown>,
+  patch: ReturnType<typeof compatPatch>,
+): Record<string, unknown> {
+  const providers = { ...(asRecord(current.providers) ?? {}) }
+  for (const [provider, body] of Object.entries(patch.providers)) {
+    const existing = { ...(asRecord(providers[provider]) ?? {}) }
+    providers[provider] = {
+      ...existing,
+      compat: { ...(asRecord(existing.compat) ?? {}), ...body.compat },
+    }
+  }
+  return { ...current, providers }
 }

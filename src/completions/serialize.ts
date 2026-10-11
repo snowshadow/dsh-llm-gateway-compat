@@ -2,7 +2,7 @@
  * Serialize harness messages into OpenAI Chat Completions for gateways that
  * reject `developer` and `max_completion_tokens`.
  */
-import { contentHasImage, LlmError, type ContentBlock, type GenerateOptions, type Message } from '@deepseek-ai/dsh-llm'
+import { contentHasImage, LlmError, type ContentBlock, type GenerateOptions, type RequestMessage } from '@deepseek-ai/dsh-llm'
 import type { GatewayProviderProfile, ThinkingFormat } from './types.js'
 
 const PROTECTED_BODY_KEYS = new Set([
@@ -31,7 +31,7 @@ function flattenReasoning(blocks: readonly ContentBlock[]): string {
     .join('')
 }
 
-function serializeAssistant(message: Message, format: ThinkingFormat): Record<string, unknown> {
+function serializeAssistant(message: RequestMessage, format: ThinkingFormat): Record<string, unknown> {
   const text = flattenText(message.content)
   const reasoning = flattenReasoning(message.content)
   const toolCalls = message.content
@@ -58,9 +58,10 @@ function serializeAssistant(message: Message, format: ThinkingFormat): Record<st
   return wire
 }
 
-function serializeMessages(messages: readonly Message[], format: ThinkingFormat): Record<string, unknown>[] {
+function serializeMessages(messages: readonly RequestMessage[], format: ThinkingFormat): Record<string, unknown>[] {
   const wire: Record<string, unknown>[] = []
   for (const message of messages) {
+    if (message.role === 'developer') continue
     if (contentHasImage(message.content)) {
       throw new LlmError(
         'The OpenAI-compat gateway adapter does not send image content.',
@@ -75,18 +76,15 @@ function serializeMessages(messages: readonly Message[], format: ThinkingFormat)
       wire.push(serializeAssistant(message, format))
       continue
     }
-    const toolResults = message.content.filter(block => block.type === 'tool-result')
-    const text = flattenText(message.content)
-    if (text.length > 0 || toolResults.length === 0) {
-      wire.push({ role: 'user', content: text })
-    }
-    for (const result of toolResults) {
+    if (message.role === 'tool') {
       wire.push({
         role: 'tool',
-        tool_call_id: result.toolCallId,
-        content: flattenText(result.content) || '(no output)',
+        tool_call_id: message.toolCallId,
+        content: flattenText(message.content) || '(no output)',
       })
+      continue
     }
+    wire.push({ role: 'user', content: flattenText(message.content) })
   }
   return wire
 }

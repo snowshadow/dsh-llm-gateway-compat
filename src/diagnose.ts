@@ -37,11 +37,11 @@ export function yamlSnippet(provider: string, fix: CompatFix): string {
     ? 'supportsDeveloperRole: false'
     : 'maxTokensField: max_tokens'
   return [
-    'llm-pi-ai:',
-    '  providers:',
-    `    ${yamlProviderKey(provider)}:`,
-    '      compat:',
-    `        ${field}`,
+    '# llm-pi-ai entry config',
+    'providers:',
+    `  ${yamlProviderKey(provider)}:`,
+    '    compat:',
+    `      ${field}`,
   ].join('\n')
 }
 
@@ -75,7 +75,7 @@ export function diagnoseGatewayFailure(
       summary: `Gateway rejected developer role on ${provider}`,
       body: [
         `The gateway for provider "${provider}" rejected the OpenAI \`developer\` role (HTTP 400).`,
-        'Write this into `$DSH_HOME/settings.yaml` and retry, or leave autoApplyCompat enabled:',
+        'Put this on the `llm-pi-ai` entry config and retry, or leave autoApplyCompat enabled:',
         '',
         '```yaml',
         yamlSnippet(provider, fix),
@@ -90,7 +90,7 @@ export function diagnoseGatewayFailure(
       summary: `Gateway rejected max_completion_tokens on ${provider}`,
       body: [
         `The gateway for provider "${provider}" rejected \`max_completion_tokens\`.`,
-        'Write this into `$DSH_HOME/settings.yaml` and retry, or leave autoApplyCompat enabled:',
+        'Put this on the `llm-pi-ai` entry config and retry, or leave autoApplyCompat enabled:',
         '',
         '```yaml',
         yamlSnippet(provider, fix),

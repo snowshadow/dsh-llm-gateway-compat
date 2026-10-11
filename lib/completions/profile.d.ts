@@ -8,7 +8,7 @@ export interface ProviderConfig {
     baseURL: string;
     apiKeyEnv: string;
     authHeader?: 'bearer' | 'api-key';
-    models?: Array<{
+    models?: ReadonlyArray<{
         id: string;
         name?: string;
         contextWindow?: number;

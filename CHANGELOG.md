@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.0
+
+Requires DeepSeek Harness 0.2.1-alpha.2 or later.
+
+- Read live config from volatile entry fields and `loader/volatile-update`, not `settings.yaml` namespaces
+- Persist `llm-pi-ai` dialect fixes through `ctx.configEditor` onto that entry's `providers.<id>.compat`
+- Declare a `llm-gateway-compat` message source for gateway notices
+- Serialize `role: tool` results and drop `developer` tool-update messages
+
 ## 0.4.0
 
 Requires DeepSeek Harness 0.1.5-rc.1 or later. Not compatible with published npm `0.0.1-rc.1` APIs.

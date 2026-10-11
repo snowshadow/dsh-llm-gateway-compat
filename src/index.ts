@@ -4,20 +4,34 @@
  */
 import type { Context } from '@deepseek-ai/cordis'
 import Schema from '@deepseek-ai/schemastery'
-import { boundContextSummary, createUserMessage } from '@deepseek-ai/dsh-llm'
-import '@deepseek-ai/dsh-settings'
+import { boundContextSummary, createUserMessage, type ContextFormed } from '@deepseek-ai/dsh-llm'
 import { sanitizeToolCallStream } from './sanitize.js'
 import { recoverGatewayError } from './recover.js'
 import type { GatewayRequestErrorAction, GatewayRequestErrorPayload } from './recover.js'
-import { PI_AI_NS, SETTINGS_NS } from './namespace.js'
+import { applyCompatPatch } from './compat-settings.js'
+import type { compatPatch } from './compat-settings.js'
 import { registerCompletionsAdapter } from './completions/register.js'
 import type { ProviderConfig } from './completions/profile.js'
+import { readLive, type Live } from './live.js'
+
+declare module '@deepseek-ai/dsh-llm' {
+  interface MessageSourceMap {
+    'llm-gateway-compat': { kind: 'llm-gateway-compat' } & ContextFormed
+  }
+}
+
+declare module '@deepseek-ai/cordis' {
+  interface Events {
+    /** Volatile config was committed into this fiber. Dispatched by Loader to the owning fiber only. */
+    'loader/volatile-update'(paths: readonly (readonly string[])[]): void
+  }
+}
 
 export type { ProviderConfig } from './completions/profile.js'
 
 export { sanitizeToolCallChunk, sanitizeToolCallStream, SYNTHESIZED_CALL_ID_PREFIX } from './sanitize.js'
 export { diagnoseGatewayFailure, yamlSnippet } from './diagnose.js'
-export { compatAlreadyApplied, compatPatch } from './compat-settings.js'
+export { applyCompatPatch, compatAlreadyApplied, compatPatch } from './compat-settings.js'
 export { recoverGatewayError } from './recover.js'
 export { SETTINGS_NS, PI_AI_NS } from './namespace.js'
 export { CompletionsAdapter } from './completions/adapter.js'
@@ -32,17 +46,25 @@ export const inject = ['llm']
 
 export interface Config {
   /** Master switch for stream sanitizing and 400 recovery. */
-  enabled: boolean
+  enabled: Live<boolean>
   /** Classify known gateway 400s and inject a YAML snippet. */
-  diagnose: boolean
+  diagnose: Live<boolean>
   /** Persist the matching `llm-pi-ai` compat field and retry the request once. */
-  autoApplyCompat: boolean
+  autoApplyCompat: Live<boolean>
   /**
-   * Chat Completions routes this plugin owns. Empty by default so v0.1/v0.2
+   * Chat Completions routes this plugin owns. Empty by default so older
    * users keep using `llm-pi-ai` custom providers. Route ids must not collide
    * with `llm-deepseek` or `llm-pi-ai`.
    */
-  providers?: Record<string, ProviderConfig>
+  providers: Live<Record<string, ProviderConfig>>
+}
+
+/** Plain snapshot of {@link Config} for one operation. */
+interface ConfigSnapshot {
+  enabled: boolean
+  diagnose: boolean
+  autoApplyCompat: boolean
+  providers: Record<string, ProviderConfig>
 }
 
 const catalogModel = Schema.object({
@@ -64,45 +86,85 @@ const providerConfig = Schema.object({
   includeUsage: Schema.boolean().default(true),
 })
 
-export const Config: Schema<Config> = Schema.object({
-  enabled: Schema.boolean().default(true),
-  diagnose: Schema.boolean().default(true),
-  autoApplyCompat: Schema.boolean().default(true),
-  providers: Schema.dict(providerConfig).default({}),
+export const Config = Schema.object({
+  enabled: Schema.boolean().default(true).volatile(),
+  diagnose: Schema.boolean().default(true).volatile(),
+  autoApplyCompat: Schema.boolean().default(true).volatile(),
+  providers: Schema.dict(providerConfig).default({}).volatile(),
 })
+
+const PI_AI_PACKAGE = '@deepseek-ai/dsh-llm-pi-ai'
+
+interface ProfileEntry {
+  options: { id: string; name?: string }
+  fiber?: { config?: { providers?: unknown } }
+}
+
+interface ConfigEditorLike {
+  entries(): ProfileEntry[]
+  edit(
+    entry: ProfileEntry,
+    change: (current: Record<string, unknown>, inherited: Record<string, unknown>) => Record<string, unknown>,
+  ): Promise<void>
+}
+
+function editorOf(ctx: Context): ConfigEditorLike | undefined {
+  return ctx.get('configEditor') as ConfigEditorLike | undefined
+}
+
+function piAiEntry(editor: ConfigEditorLike): ProfileEntry | undefined {
+  return editor.entries().find(entry => entry.options.name === PI_AI_PACKAGE || entry.options.id === 'llm-pi-ai')
+}
+
+function piAiSection(ctx: Context): unknown {
+  const editor = editorOf(ctx)
+  const entry = editor === undefined ? undefined : piAiEntry(editor)
+  const providers = entry?.fiber?.config?.providers
+  if (providers === undefined) return undefined
+  return { providers: readLive(providers) }
+}
+
+async function writePiAiCompat(ctx: Context, patch: ReturnType<typeof compatPatch>): Promise<void> {
+  const editor = editorOf(ctx)
+  const entry = editor === undefined ? undefined : piAiEntry(editor)
+  if (editor === undefined || entry === undefined) {
+    throw new Error('llm-pi-ai configuration entry is not available')
+  }
+  await editor.edit(entry, current => applyCompatPatch(current, patch))
+}
+
+function snapshot(config: Config): ConfigSnapshot {
+  return {
+    enabled: readLive(config.enabled),
+    diagnose: readLive(config.diagnose),
+    autoApplyCompat: readLive(config.autoApplyCompat),
+    providers: readLive(config.providers) ?? {},
+  }
+}
 
 /**
  * Register stream sanitizing, optional Chat Completions routes, and, when
- * agents/settings are present, gateway 400 recovery.
+ * agents are present, gateway 400 recovery.
  * @param ctx - Cordis context that owns `llm/stream`.
- * @param config - composition entry config; settings overlay it live.
+ * @param config - composition entry config. Volatile fields update in place.
  */
 export function apply(ctx: Context, config: Config): void {
-  let source = (): Config => config
   const retried = new Set<string>()
 
   ctx.on('llm/stream', (_options, next) => {
-    if (!source().enabled) return next()
+    if (!snapshot(config).enabled) return next()
     return sanitizeToolCallStream(next())
   })
 
-  const completions = registerCompletionsAdapter(ctx, () => source())
+  const completions = registerCompletionsAdapter(ctx, () => snapshot(config))
   completions.sync()
-
-  ctx.inject(['settings'], (settingsCtx) => {
-    settingsCtx.settings.installSection(ctx, SETTINGS_NS, Config, config, {
-      setSource: (current) => {
-        source = current
-      },
-      onChange: () => {
-        completions.sync()
-      },
-    })
+  ctx.on('loader/volatile-update', () => {
+    completions.sync()
   })
 
-  ctx.inject(['agents', 'settings'], (wired) => {
+  ctx.inject(['agents'], (wired) => {
     wired.on('agent/request-error', async (payload: GatewayRequestErrorPayload, next: () => Promise<GatewayRequestErrorAction>) => {
-      const current = source()
+      const current = snapshot(config)
       if (!current.enabled || !current.diagnose) return next()
       const action = await recoverGatewayError(
         {
@@ -111,14 +173,13 @@ export function apply(ctx: Context, config: Config): void {
           autoApply: current.autoApplyCompat,
         },
         {
-          getPiAiSection: () => wired.settings.get(PI_AI_NS),
-          updatePiAi: (patch) => wired.settings.update(PI_AI_NS, patch),
+          getPiAiSection: () => piAiSection(ctx),
+          updatePiAi: patch => writePiAiCompat(ctx, patch as ReturnType<typeof compatPatch>),
           inject: (body, summary) => {
             payload.agent.inject(createUserMessage({
               content: [{ type: 'text', text: body }],
               source: {
-                kind: 'plugin',
-                plugin: name,
+                kind: 'llm-gateway-compat',
                 form: 'notice',
                 summary: boundContextSummary(summary),
               },

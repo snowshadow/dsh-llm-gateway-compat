@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { compatAlreadyApplied, compatPatch, readProviderCompat } from '../src/compat-settings.js'
+import { applyCompatPatch, compatAlreadyApplied, compatPatch, readProviderCompat } from '../src/compat-settings.js'
 
 describe('compat-settings', () => {
   const developer = { kind: 'supportsDeveloperRole' as const, value: false as const }
@@ -8,6 +8,24 @@ describe('compat-settings', () => {
   it('builds a nested merge patch that does not replace other providers', () => {
     expect(compatPatch('gw', developer)).toEqual({
       providers: { gw: { compat: { supportsDeveloperRole: false } } },
+    })
+  })
+
+  it('merges compat into one provider without dropping its other fields', () => {
+    const next = applyCompatPatch({
+      providers: {
+        gw: { apiKeyEnv: 'GW_KEY', compat: { thinkingFormat: 'deepseek' } },
+        other: { baseURL: 'https://example.test' },
+      },
+    }, compatPatch('gw', developer))
+    expect(next).toEqual({
+      providers: {
+        gw: {
+          apiKeyEnv: 'GW_KEY',
+          compat: { thinkingFormat: 'deepseek', supportsDeveloperRole: false },
+        },
+        other: { baseURL: 'https://example.test' },
+      },
     })
   })
 

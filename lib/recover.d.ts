@@ -31,9 +31,9 @@ export interface RecoverInput {
 }
 /** Storage and delivery the plugin supplies; tests replace these. */
 export interface RecoverDeps {
-    /** Current `llm-pi-ai` section, or `undefined` when that namespace is absent. */
+    /** Current `llm-pi-ai` config, or `undefined` when that entry is absent. */
     getPiAiSection: () => unknown | undefined;
-    /** Write a merge patch; omit when settings cannot be written. */
+    /** Persist a compat merge patch; omit when the profile cannot be written. */
     updatePiAi?: (patch: object) => Promise<void>;
     /** Queue a plugin-sourced notice for the next claimed step. */
     inject: (body: string, summary: string) => void;

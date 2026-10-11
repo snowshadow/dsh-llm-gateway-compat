@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ToolCallId, LlmError, createMessage, createUserMessage } from '@deepseek-ai/dsh-llm'
+import { ToolCallId, LlmError, createMessage, createToolResultMessage, createUserMessage } from '@deepseek-ai/dsh-llm'
 import { serializeRequest } from '../src/completions/serialize.js'
 import { resolveProfiles } from '../src/completions/profile.js'
 
@@ -69,6 +69,28 @@ describe('serializeRequest', () => {
     const asTags = serializeRequest(request, { ...profile, thinkingFormat: 'think-tags' })
     expect(asTags.messages).toMatchObject([{ content: '<think>plan</think>\ndone' }])
     expect(asTags.messages?.[0]).not.toHaveProperty('reasoning_content')
+  })
+
+  it('sends tool-role messages and drops developer tool updates', () => {
+    const body = serializeRequest({
+      provider: 'gw',
+      model: 'qwen',
+      messages: [
+        createMessage({
+          role: 'developer',
+          content: [{ type: 'tool-addition', toolName: 'bash' }],
+          source: { kind: 'user' },
+        }),
+        createToolResultMessage({
+          callId: ToolCallId('c1'),
+          content: [{ type: 'text', text: 'ok' }],
+          isError: false,
+        }),
+      ],
+    }, profile)
+    expect(body.messages).toEqual([
+      { role: 'tool', tool_call_id: 'c1', content: 'ok' },
+    ])
   })
 
   it('refuses image content', () => {

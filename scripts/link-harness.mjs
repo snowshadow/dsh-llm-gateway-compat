@@ -1,21 +1,21 @@
 #!/usr/bin/env node
 /**
  * Point this plugin's @deepseek-ai packages at a sibling deepseek-harness
- * checkout so typecheck/tests see 0.1.5-rc.1 APIs. No-op when the sibling
- * is absent (GitHub consumers use the committed lib/).
+ * checkout so typecheck/tests see 0.2.1-alpha.2 APIs. `DSH_HARNESS` overrides
+ * the sibling path. No-op when that checkout is absent.
  */
 import { lstat, mkdir, rm, symlink } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
-const harness = join(root, '..', 'deepseek-harness')
+const harness = process.env.DSH_HARNESS ?? join(root, '..', 'deepseek-harness')
 const destDir = join(root, 'node_modules', '@deepseek-ai')
 
 const links = {
   cordis: join(harness, 'vendor', 'cordis'),
+  schemastery: join(harness, 'vendor', 'schemastery'),
   'dsh-llm': join(harness, 'packages', 'llm', 'llm'),
-  'dsh-settings': join(harness, 'packages', 'settings', 'settings'),
 }
 
 try {

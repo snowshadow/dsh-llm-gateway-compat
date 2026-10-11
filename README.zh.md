@@ -4,11 +4,11 @@
 
 [![dshbase 实测可装](https://dshbase.com/badges/dsh-llm-gateway-compat.svg)](https://dshbase.com/zh/plugins/dsh-llm-gateway-compat/)
 
-兼容 DeepSeek Harness（DSH）**0.1.5-rc.1 及以后**的社区 bundle。它阻止空串冲掉流式 tool-call 身份，把最常见的两种请求 400 写成官方 `llm-pi-ai` compat 并重试一次，还可以自己挂 Chat Completions 路由（默认 `system` / `max_tokens`）。
+兼容 DeepSeek Harness（DSH）**0.2.1-alpha.2 及以后**的社区 bundle。它阻止空串冲掉流式 tool-call 身份，把最常见的两种请求 400 写成官方 `llm-pi-ai` compat 并重试一次，还可以自己挂 Chat Completions 路由（默认 `system` / `max_tokens`）。
 
 这不是 DeepSeek 官方包，也未获 DeepSeek 背书。
 
-0.4.0 跟随当前 harness API（`ToolCallId`、`ctx.settings.installSection`），无法在 npm `0.0.1-rc.1` 上加载。
+0.5.0 跟随 0.2.1 的配置和消息模型，无法在 0.1.x 上加载。
 
 ## 做什么
 
@@ -51,7 +51,7 @@ dsh plugin --profile web add /absolute/path/to/dsh-llm-gateway-compat
 
 ## 配置
 
-插件开关（也可写在 `$DSH_HOME/settings.yaml` 的 `llm-gateway-compat:` 下，会热更新）：
+插件开关写在 `llm-gateway-compat` 这个 profile entry 上。volatile 字段会更新正在运行的插件；设置表单改的也是这些字段。
 
 | 键 | 默认 | 含义 |
 |---|---|---|
@@ -63,20 +63,19 @@ dsh plugin --profile web add /absolute/path/to/dsh-llm-gateway-compat
 一条网关路由示例：
 
 ```yaml
-# $DSH_HOME/settings.yaml
-llm-gateway-compat:
-  providers:
-    dashscope-compat:
-      displayName: DashScope
-      baseURL: https://dashscope.aliyuncs.com/compatible-mode/v1
-      apiKeyEnv: DASHSCOPE_API_KEY
-      authHeader: bearer
-      thinkingFormat: reasoning_content
-      extraBody:
-        user: harness
-      models:
-        - id: deepseek-v4-flash
-          name: DeepSeek V4 Flash
+# llm-gateway-compat entry config
+providers:
+  dashscope-compat:
+    displayName: DashScope
+    baseURL: https://dashscope.aliyuncs.com/compatible-mode/v1
+    apiKeyEnv: DASHSCOPE_API_KEY
+    authHeader: bearer
+    thinkingFormat: reasoning_content
+    extraBody:
+      user: harness
+    models:
+      - id: deepseek-v4-flash
+        name: DeepSeek V4 Flash
 ```
 
 把 `DASHSCOPE_API_KEY` 写进模型页或 `$DSH_HOME/.credentials.yaml`，或在启动 `dsh` 的环境里导出。网关需要 `/v1` 或 `/compatible-mode/v1` 时写进 `baseURL`。然后在模型选择器里选 `dashscope-compat` / `deepseek-v4-flash`。
@@ -96,7 +95,7 @@ llm-gateway-compat:
 
 ## 开发
 
-类型检查和测试需要旁边有一份 `deepseek-harness` checkout（`../deepseek-harness`，0.1.5-rc.1 API）。`pnpm test` / `pnpm run build` 会把 `@deepseek-ai/dsh-llm`、`dsh-settings`、`cordis` 链到那份 checkout。
+类型检查和测试需要旁边有一份已构建的 `deepseek-harness` checkout（`../deepseek-harness` 或 `DSH_HARNESS`，0.2.1-alpha.2）。`pnpm test` / `pnpm run build` 会把 `@deepseek-ai/dsh-llm`、`cordis`、`schemastery` 链到那份 checkout。
 
 ```sh
 pnpm install
@@ -110,8 +109,9 @@ pnpm run build
 - 不发送图片（`UNSUPPORTED_CONTENT`）。
 - `think-tags` 只作用于回放的 assistant 历史，不解析半截流式标签。
 - 没有空闲流 watchdog；调用方的 `AbortSignal` 会传给 fetch。
-- 自动写入只覆盖 `llm-pi-ai` 上的 `supportsDeveloperRole: false` 和 `maxTokensField: max_tokens`。
-- 目前没有 Web 设置卡片；改 `settings.yaml` 或 profile patch。
+- 自动写入只通过 profile 配置编辑器改 `llm-pi-ai` 上的 `supportsDeveloperRole: false` 和 `maxTokensField: max_tokens`。
+- 不发送 `developer` 消息（工具增减）。请求仍带当前的 `tools` 列表。
+- volatile 字段可在设置表单里改。其余配置写在 profile patch 里。
 
 ## License
 
